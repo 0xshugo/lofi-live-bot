@@ -1,0 +1,7 @@
+{
+  "name": "generator",
+  "type": "module",
+  "dependencies": {
+    "bullmq": "^4.0.0"
+  }
+}
