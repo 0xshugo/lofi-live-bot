@@ -1,0 +1,4 @@
+# Ignore binary assets
+overlay/*.png
+overlay/*.ttf
+soundfonts/*.sf2
