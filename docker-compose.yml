@@ -1,0 +1,53 @@
+version: "3"
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: always
+  generator:
+    build: ./generator
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    volumes:
+      - pipe:/tmp/pipe
+  monitor:
+    build: ./monitor
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - YT_LIVE_CHAT_ID
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - GOOGLE_REFRESH_TOKEN
+    depends_on:
+      - redis
+  announcer:
+    build: ./announcer
+    environment:
+      - YT_LIVE_CHAT_ID
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - GOOGLE_REFRESH_TOKEN
+    depends_on:
+      - redis
+  ffmpeg:
+    image: jrottenberg/ffmpeg:6-alpine
+    command: >
+      -hide_banner -loglevel info -f s16le -ar 44100 -ac 2 -i /tmp/pipe/audio.pcm \
+      -loop 1 -i /overlay/cover.png \
+      -filter_complex "drawtext=fontfile=/overlay/Roboto-Regular.ttf:textfile=/overlay/now_playing.txt:reload=1:x=(w-text_w)/2:y=h-50:fontcolor=white" \
+      -shortest -f flv rtmp://a.rtmp.youtube.com/live2/${YT_STREAM_KEY}
+    volumes:
+      - pipe:/tmp/pipe
+      - ./overlay:/overlay
+    environment:
+      - YT_STREAM_KEY
+    depends_on:
+      - generator
+volumes:
+  pipe:
